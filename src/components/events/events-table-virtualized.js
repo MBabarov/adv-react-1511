@@ -1,8 +1,8 @@
 import React, { Component } from 'react'
 import { connect } from 'react-redux'
-import { Table, Column } from 'react-virtualized'
+import { Table, Column, InfiniteLoader } from 'react-virtualized'
 import {
-  fetchAllEvents,
+  fetchPartEvents,
   eventListSelector,
   loadedSelector,
   loadingSelector,
@@ -15,28 +15,52 @@ export class EventsTableVirtualized extends Component {
   static propTypes = {}
 
   componentDidMount() {
-    this.props.fetchAllEvents()
+    this.props.fetchPartEvents()
   }
+
+  isRowLoaded = () => {}
+
+  loadMoreRows = ({ startIndex, stopIndex }) => {
+    console.log('startIndex', startIndex)
+    console.log('stopIndex', stopIndex)
+    alert(1)
+    this.props.fetchPartEvents()
+  }
+
+  rowGetter = ({ index }) => this.props.events[index]
 
   render() {
     if (this.props.loading) return <Loader />
     return (
-      <Table
-        rowCount={this.props.events.length}
-        width={500}
-        height={300}
-        rowHeight={50}
-        headerHeight={50}
-        rowGetter={this.rowGetter}
+      <InfiniteLoader
+        isRowLoaded={this.isRowLoaded}
+        loadMoreRows={this.loadMoreRows}
+        rowCount={
+          this.props.loaded
+            ? this.props.events.length
+            : this.props.events.length + 1
+        }
       >
-        <Column dataKey="title" width={200} label="Title" />
-        <Column dataKey="where" width={200} label="Place" />
-        <Column dataKey="when" width={200} label="When" />
-      </Table>
+        {({ onRowsRendered, registerChild }) => (
+          <Table
+            ref={registerChild}
+            onRowsRendered={onRowsRendered}
+            rowCount={this.props.events.length}
+            width={500}
+            height={300}
+            rowHeight={50}
+            headerHeight={50}
+            rowGetter={this.rowGetter}
+            onRowClick={this.props.selectEvent}
+          >
+            <Column dataKey="title" width={200} label="Title" />
+            <Column dataKey="where" width={200} label="Place" />
+            <Column dataKey="when" width={200} label="When" />
+          </Table>
+        )}
+      </InfiniteLoader>
     )
   }
-
-  rowGetter = ({ index }) => this.props.events[index]
 }
 
 export default connect(
@@ -45,5 +69,5 @@ export default connect(
     loading: loadingSelector(state),
     loaded: loadedSelector(state)
   }),
-  { fetchAllEvents, selectEvent: toggleSelectEvent }
+  { fetchPartEvents, selectEvent: toggleSelectEvent }
 )(EventsTableVirtualized)

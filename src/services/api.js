@@ -17,6 +17,16 @@ class ApiService {
       .once('value')
       .then((res) => res.val())
 
+  fetchPartEvents = (id = '', limit = 10) =>
+    this.fb
+      .database()
+      .ref('events')
+      .orderByKey()
+      .limitToFirst(limit)
+      .startAt(id)
+      .once('value')
+      .then((res) => res.val())
+
   onAuthStateChanged = (callback) => this.fb.auth().onAuthStateChanged(callback)
 }
 

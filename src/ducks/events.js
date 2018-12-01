@@ -1,4 +1,4 @@
-import { all, takeEvery, put, call } from 'redux-saga/effects'
+import { all, takeEvery, put, call, select } from 'redux-saga/effects'
 import { appName } from '../config'
 import { Record, List, OrderedSet } from 'immutable'
 import { createSelector } from 'reselect'
@@ -14,6 +14,10 @@ const prefix = `${appName}/${moduleName}`
 export const FETCH_ALL_REQUEST = `${prefix}/FETCH_ALL_REQUEST`
 export const FETCH_ALL_START = `${prefix}/FETCH_ALL_START`
 export const FETCH_ALL_SUCCESS = `${prefix}/FETCH_ALL_SUCCESS`
+
+export const FETCH_PART_REQUEST = `${prefix}/FETCH_PART_REQUEST`
+export const FETCH_PART_START = `${prefix}/FETCH_PART_START`
+export const FETCH_PART_SUCCESS = `${prefix}/FETCH_PART_SUCCESS`
 
 export const TOGGLE_SELECT = `${prefix}/TOGGLE_SELECT`
 
@@ -41,9 +45,11 @@ export default function reducer(state = new ReducerRecord(), action) {
   const { type, payload } = action
 
   switch (type) {
+    case FETCH_PART_START:
     case FETCH_ALL_START:
       return state.set('loading', true)
 
+    case FETCH_PART_SUCCESS:
     case FETCH_ALL_SUCCESS:
       return state
         .set('loading', false)
@@ -97,13 +103,20 @@ export const selectedEventsSelector = createSelector(
  * Action Creators
  * */
 
+export function fetchPartEvents() {
+  return {
+    type: FETCH_PART_REQUEST
+  }
+}
+
 export function fetchAllEvents() {
   return {
     type: FETCH_ALL_REQUEST
   }
 }
 
-export function toggleSelectEvent(id) {
+export function toggleSelectEvent(data) {
+  const id = data.rowData.get('id')
   return {
     type: TOGGLE_SELECT,
     payload: { id }
@@ -113,6 +126,24 @@ export function toggleSelectEvent(id) {
 /**
  * Sagas
  * */
+
+export function* fetchPartSaga() {
+  if (yield select(loadingSelector)) return
+  if (yield select(loadedSelector)) return
+
+  yield put({
+    type: FETCH_PART_START
+  })
+  const entities = yield select(eventListSelector)
+  const last = entities.slice(-1)[0]
+  console.log('entities', last)
+
+  const data = yield call(api.fetchPartEvents, last ? last.id : '')
+  yield put({
+    type: FETCH_PART_SUCCESS,
+    payload: data
+  })
+}
 
 export function* fetchAllSaga() {
   yield put({
@@ -128,5 +159,8 @@ export function* fetchAllSaga() {
 }
 
 export function* saga() {
-  yield all([takeEvery(FETCH_ALL_REQUEST, fetchAllSaga)])
+  yield all([
+    takeEvery(FETCH_ALL_REQUEST, fetchAllSaga),
+    takeEvery(FETCH_PART_REQUEST, fetchPartSaga)
+  ])
 }
